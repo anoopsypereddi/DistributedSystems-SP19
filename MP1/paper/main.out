@@ -1,0 +1,6 @@
+\BOOKMARK [1][-]{section.1}{Runnning Instructions}{}% 1
+\BOOKMARK [1][-]{section.2}{Protocols}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{B-multicast}{section.2}% 3
+\BOOKMARK [3][-]{subsubsection.2.1.1}{Sending Messages}{subsection.2.1}% 4
+\BOOKMARK [3][-]{subsubsection.2.1.2}{Recieving Messages}{subsection.2.1}% 5
+\BOOKMARK [2][-]{subsection.2.2}{Handling Failures}{section.2}% 6
