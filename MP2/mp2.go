@@ -9,16 +9,9 @@ import (
 	"os"
 	"strings"
 	"time"
-	//"strconv"
-	//"bytes"
 	"encoding/json"
 	"math/rand"
 )
-
-type ThreadSafeAccountMap struct {
-  sync.RWMutex
-  internal map[int]int
-}
 
 type ThreadSafeStringToConnMap struct {
 	sync.RWMutex
@@ -89,12 +82,8 @@ func main() {
 
 	blockchain := initializeBlockchain()
 
-<<<<<<< HEAD
 	serviceConn := connectToService(name, serviceIp, servicePort, localIp, localPort)
 	go manageConnections(name, serviceConn, nodesMap, connections, transactions, transactions_fd, transactionArr, blockchain)
-=======
-	go manageConnections(name, nodesMap, connections, transactions, transactions_fd, transactionArr)
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 
 	nodesMap.Lock()
 	nodesMap.internal[name] = parseIntro(introductionMessage(name,
@@ -102,19 +91,22 @@ func main() {
 																												servicePort))
 	nodesMap.Unlock()
 
-<<<<<<< HEAD
 	go listenOnPort(name, serviceConn, localIp, localPort, connections, nodesMap, transactions, transactions_fd, transactionArr, blockchain)
-	go takeCommands(name, serviceConn, nodesMap, connections, transactions, transactionArr, blockchain)
+	//go takeCommands(name, serviceConn, nodesMap, connections, transactions, transactionArr, blockchain)
+	go blockMiner(blockchain, serviceConn)
 
-=======
-	go listenOnPort(name, localIp, localPort, connections, nodesMap, transactions, transactions_fd, transactionArr)
-	go takeCommands(name, nodesMap, connections, transactions, blockchain)
-
-	serviceConn := connectToService(name, serviceIp, servicePort, localIp, localPort)
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 	listenToService(name, localIp, localPort, serviceConn, nodesMap, connections, transactions, transactions_fd, transactionArr, blockchain)
 }
 
+func blockMiner(blockchain *Blockchain,
+								serviceConn net.Conn) {
+	for {
+		time.Sleep(3 * time.Second)
+		if blockchain.solvingBlock == nil {
+			moveCurrBlockToSolveBlock(blockchain, serviceConn)
+		}
+	}
+}
 
 /**
  * Go routine which continuously runs. Every second this routine will check if the number
@@ -165,11 +157,7 @@ func takeCommands(name string,
 									serviceConn net.Conn,
 									nodesMap *ThreadSafeNodeMap,
 									connections *ThreadSafeStringToConnMap,
-<<<<<<< HEAD
 									transactions *ThreadSafeTransactionMap,
-=======
-									transactions *ThreadSafeTransactionSet,
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
                   transactionArr *ThreadSafeTransactionArr,
 									blockchain *Blockchain) {
 	reader := bufio.NewReader(os.Stdin)
@@ -228,7 +216,6 @@ func takeCommands(name string,
 			}
 			writer.Flush()
 			connections.RUnlock()
-<<<<<<< HEAD
 		} else if strings.HasPrefix(message, "CURR_BLOCK") {
 			log.Printf("PREV_HASH -> %s CURR_HASH -> %s DEPTH -> %d\n", blockchain.currentBlock.PrevHash,
 																																	blockchain.currentBlock.Hash,
@@ -298,10 +285,6 @@ func takeCommands(name string,
 				log.Printf("[+] Block %s not found in blockchain or unverified queue",
 											arr[1])
 			}
-=======
-		} else if strings.HasPrefix(message, "MINE_CURR_BLOCK") {
-			moveCurrBlockToSolveBlock(blockchain, serviceConn)
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 		}
 
 	}
@@ -324,13 +307,8 @@ func listenToService(	name string,
 											transactions *ThreadSafeTransactionMap,
 											transactions_fd *ThreadSafeFile,
                       transactionArr *ThreadSafeTransactionArr,
-<<<<<<< HEAD
                       blockchain *Blockchain) {
 	reader := bufio.NewReader(serviceConn)
-=======
-											blockchain *Blockchain) {
-	reader := bufio.NewReader(conn)
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
@@ -354,7 +332,7 @@ func listenToService(	name string,
 				nodesMap.internal[node.name] = node
 				nodesMap.Unlock()
 			}
-      log.Printf(message)
+      //log.Printf(message)
 			// Forming connection to node
 			conn, err := net.Dial("tcp", makeSockAddr(node.ip, node.port))
 			if err != nil {
@@ -392,12 +370,7 @@ func listenToService(	name string,
 			//connections.internal[node.name] = conn
 			//connections.Unlock()
 
-<<<<<<< HEAD
 			//go connectionListener(node.name, serviceConn, conn, connections, nodesMap, reader, transactions, transactions_fd, transactionArr, blockchain)
-=======
-			go connectionListener(node.name, conn, connections, nodesMap,
-														reader, transactions, transactions_fd, transactionArr)
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 
 		} else if strings.HasPrefix(message, "TRANSACTION") {
 				transaction := parseTransaction(message)
@@ -410,31 +383,39 @@ func listenToService(	name string,
 				// log.Printf("%s\n", transaction.transactionId)
 
 				transactions_fd.Lock()
-<<<<<<< HEAD
-				transactions_fd.internal.Write([]byte(fmt.Sprintf("%s\n",
-																											transaction.TransactionId)))
-=======
-				transactions_fd.internal.Write([]byte(fmt.Sprintf("%f %s\n",
-																								transaction.timestamp,
-																								transaction.transactionId)))
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
+				transactions_fd.internal.Write([]byte(fmt.Sprintf("[TRANSACTION] %s\n",
+																											transaction.TransactionId,
+																											int32(time.Now().Unix()))))
 				transactions_fd.Unlock()
 		} else if strings.HasPrefix(message, "SOLVED") {
 			log.Printf("%s\n", message)
       blockHash, solutionHash := parseSolved(message)
 			minedBlock := solutionForSolving(blockchain, blockHash, solutionHash)
+			transactions_fd.Lock()
+			transactions_fd.internal.Write([]byte(fmt.Sprintf("[BLOCK] %s %s %d\n",
+																							minedBlock.Hash,
+																							minedBlock.PrevHash,
+																							int32(time.Now().Unix()))))
+				for _, transaction := range minedBlock.Transactions {
+					transactions_fd.internal.Write([]byte(fmt.Sprintf("[BSTRANS] %s %d\n",
+																												transaction.TransactionId,
+																												int32(time.Now().Unix()))))
+				}
+
+			transactions_fd.Unlock()
 			multicast(connections, blockMessage(minedBlock))
-<<<<<<< HEAD
 		} else if strings.HasPrefix(message, "VERIFY") {
 			passed, hash, _ := parseVerify(message)
 			if passed {
 				// log.Printf("[+] Verified block %s\n", hash)
 				blockVerified(blockchain, hash)
+				transactions_fd.internal.Write([]byte(fmt.Sprintf("[BLOCK] %s %s %d\n",
+																							hash,
+																							blockchain.blocks[hash].PrevHash,
+																							int32(time.Now().Unix()))))
+
 			}
     }
-=======
-		}
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 	}
 }
 
@@ -458,12 +439,14 @@ func listenOnPort(nodeName string,
 	if err != nil {
 		log.Fatal(err)
 	}
+	counter := 0
 	for {
 		conn, err := ln.Accept()
+		log.Println("%d\n Connections Attempted", counter)
+		counter += 1
 
 		if err != nil {
-			log.Printf("[-] Connection from %s not accepted properly\n",
-										getRemoteAddr(conn))
+			log.Printf("[-] Connection from %s not accepted properly\n", getRemoteAddr(conn))
 		} else {
 			writeToConn(conn, nameMessage(nodeName))
 			reader := bufio.NewReader(conn)
@@ -506,45 +489,17 @@ func connectionListener(name string,
 												reader *bufio.Reader,
 												transactions *ThreadSafeTransactionMap,
 												transactions_fd *ThreadSafeFile,
-<<<<<<< HEAD
                         transactionArr *ThreadSafeTransactionArr,
 												blockchain *Blockchain) {
   
-=======
-                        transactionArr *ThreadSafeTransactionArr) {
-	connections.Lock()
-	connections.internal[name] = conn
-	connections.Unlock()
-
-	nodesMap.RLock()
-	for _, curr_node := range nodesMap.internal {
-		writeToConn(conn, introductionMessage(curr_node.name,
-																					curr_node.ip,
-																					curr_node.port))
-	}
-	nodesMap.RUnlock()
-
-	transactions.RLock()
-	for transaction, _ := range transactions.internal {
-		writeToConn(conn, transactionMessage(transaction))
-	}
-	transactions.RUnlock()
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
-<<<<<<< HEAD
 			log.Printf("[DISCONNECT] %v", err)
       
       connections.Lock()
       delete(connections.internal, name)
-=======
-			log.Printf("[DISCONNECT] %s <-> %s",	getRemoteAddr(conn),
-																						conn.LocalAddr().String())
-			connections.Lock()
-			delete(connections.internal, name)
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 			connections.Unlock()
       
       nodesMap.RLock()
@@ -606,37 +561,34 @@ func connectionListener(name string,
 				transactions.internal[transaction.TransactionId] = transaction
 				transactions.Unlock()
 				insertTransaction(transaction, transactionArr)
-<<<<<<< HEAD
 				insertTransactionIntoBlock(blockchain, &transaction)
 				transactions_fd.Lock()
-				transactions_fd.internal.Write([]byte(fmt.Sprintf("%s\n",
-																											transaction.TransactionId)))
-=======
-
-				transactions_fd.Lock()
-				transactions_fd.internal.Write([]byte(fmt.Sprintf("%f %s\n",
-																					transaction.timestamp,
-																					transaction.transactionId)))
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
+				transactions_fd.internal.Write([]byte(fmt.Sprintf("[TRANSACTION] %s %d\n",
+																											transaction.TransactionId,
+																											int32(time.Now().Unix()))))
 				transactions_fd.internal.Flush()
 				transactions_fd.Unlock()
 			}
 		} else if strings.HasPrefix(message, "BLOCK_SOLVED") {
-<<<<<<< HEAD
 			arr := strings.Fields(message)
-		  jsonBlob := []byte(arr[1])	
+		  jsonBlob := []byte(arr[1])
 			//log.Printf("Recieved block %s\n", jsonBlob)
 			block := Block{}
 			err := json.Unmarshal(jsonBlob, &block)
 			if err != nil {
 				log.Printf("Error unmarshalling data %v\n", err)
 			}
+
+			for _, transaction := range block.Transactions {
+				transactions_fd.Lock()
+				transactions_fd.internal.Write([]byte(fmt.Sprintf("[BSTRANS] %s %d\n",
+																											transaction.TransactionId,
+																											int32(time.Now().Unix()))))
+
+				transactions_fd.Unlock()
+			}
+
 			//log.Printf("Hash: %s\n", block.Hash)
-=======
-			jsonBlob := strings.TrimSpace(message[12:])
-			block := Block{}
-			json.Unmarshal([]byte(jsonBlob), &block)
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 			blockchain.Lock()
 			_, inBlockchain := blockchain.blocks[block.Hash]
 			_, inUnverified := blockchain.unverifiedBlocks[block.Hash]
@@ -645,17 +597,11 @@ func connectionListener(name string,
 				blockchain.Unlock()
 				continue
 			}
-<<<<<<< HEAD
 			blockchain.unverifiedBlocks[block.Hash] = &block
 			blockchain.Unlock()
 			multicast(connections, blockMessage(&block))
 			writeToConn(serviceConn, verifyCommand(blockHash(&block), block.SolvedHash))
 			//log.Printf("[+] Verifying Block %s\n", block.Hash)
-=======
-			multicast(connections, message)
-			blockchain.unverifiedBlocks[block.Hash] = &block
-			blockchain.Unlock()
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 		}
 	}
 }
@@ -697,15 +643,8 @@ func createWriteConnection(nodesMap     *ThreadSafeNodeMap,
  *
  */
 func findNewConnection(	connections *ThreadSafeStringToConnMap,
-<<<<<<< HEAD
 												nodesMap *ThreadSafeNodeMap,
                         transactions *ThreadSafeTransactionMap) (net.Conn, string, bool) {
-=======
-												nodesMap *ThreadSafeNodeMap) (net.Conn,
-																											*bufio.Reader,
-																											string,
-																											bool) {
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 	nodesMap.Lock()
 	defer nodesMap.Unlock()
 	for _ , node := range nodesMap.internal {

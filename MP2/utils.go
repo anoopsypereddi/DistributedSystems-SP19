@@ -59,7 +59,6 @@ func (t Transaction) String () string {
 func insertTransaction(t Transaction, transactions *ThreadSafeTransactionArr) {
   transactions.Lock()
   defer transactions.Unlock()
-<<<<<<< HEAD
 	/*
   idx := len(transactions.internal) - 1
   transactions.internal = append(transactions.internal, t)
@@ -76,9 +75,6 @@ func insertTransaction(t Transaction, transactions *ThreadSafeTransactionArr) {
 	*/
 	transactions.internal = append(transactions.internal, t)
   return
-=======
-  transactions.internal = append(transactions.internal, t) 
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 }
 
 func nodeInConnections(	name string,

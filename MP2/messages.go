@@ -43,7 +43,6 @@ func generateTransaction(transactionId string) string {
 	return fmt.Sprintf("TRANSACTION 1551208414.204385 %s 183 99 10\n", transactionId)
 }
 
-<<<<<<< HEAD
 func solveCommand(hash string) string {
 	log.Printf("SOLVE %s\n", hash)
 	return fmt.Sprintf("SOLVE %s\n", hash)
@@ -52,12 +51,4 @@ func solveCommand(hash string) string {
 func verifyCommand(blockHash string, solutionHash string) string {
   //log.Printf("VERIFY %s %s\n", blockHash, solutionHash)
   return fmt.Sprintf("VERIFY %s %s\n", blockHash, solutionHash)
-=======
-func blockMessage(block *Block) string {
-	jsonBlob, err := json.Marshal(*block)
-	if err != nil {
-		log.Printf("[-] Block %s could not be seialized into json string\n", block.Hash)
-	}
-	return fmt.Sprintf("BLOCK_SOLVED %s\n", jsonBlob)
->>>>>>> bbde62bbc1a32836300b7f4984f431aec16f507c
 }
